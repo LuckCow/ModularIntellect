@@ -1,7 +1,8 @@
-from src.components import imemory_service
+from src.components.imemory_service import IMemoryService
+
 
 class MemoryService:
-    def __init__(self, context: IMemoryContext):
+    def __init__(self, context: IMemoryService):
         self.context = context
 
     def get(self, key: str):

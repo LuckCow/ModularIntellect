@@ -50,3 +50,6 @@ class TaskQueueService(ITaskQueueService):
     def __str__(self):
         tasks_str = '\n\t'.join(f'{item[0]+1}. {item[1]}' for item in enumerate(self._queue.queue))
         return f'Tasks:\n\t{tasks_str}'
+
+    def __bool__(self):
+        return not self._queue.empty()
