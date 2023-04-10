@@ -51,6 +51,9 @@ class KnowledgeBaseQueryAgent(BaseChainLangAgent):
             with open(storage_path, "rb") as f:
                 self.vectorstore = pickle.load(f)
 
+        # initialize chat history
+        self.chat_history = []
+
         super().__init__()
 
     def _get_chain(self):
@@ -76,5 +79,6 @@ class KnowledgeBaseQueryAgent(BaseChainLangAgent):
         return qa
 
     def execute(self, task: ITask):
-        result = self._chain({"question": task, "chat_history": []})
+        result = self._chain({"question": task, "chat_history": self.chat_history})
+        self.chat_history.append((task, result["answer"]))
         return result['answer']
