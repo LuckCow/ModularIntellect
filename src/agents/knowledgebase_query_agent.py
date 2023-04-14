@@ -15,6 +15,8 @@ from src.services.chainlang_agent_service import BaseChainLangAgent
 from langchain.chains.chat_vector_db.prompts import (CONDENSE_QUESTION_PROMPT,
                                                      QA_PROMPT)
 
+from src.visualization.vector_search import visualize_vector_search
+
 
 def ingest_docs(knowledge_path: str, storage_path: str):
     """Get documents from repository."""
@@ -79,6 +81,8 @@ class KnowledgeBaseQueryAgent(BaseChainLangAgent):
         return qa
 
     def execute(self, task: ITask):
+
+        visualize_vector_search(self.vectorstore, task)
         result = self._chain({"question": task, "chat_history": self.chat_history})
         self.chat_history.append((task, result["answer"]))
         return result['answer']
