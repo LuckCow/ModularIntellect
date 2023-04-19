@@ -6,6 +6,7 @@ Based on chat-langchain (https://github.com/hwchase17/chat-langchain/)
 
 import pickle
 import os
+import logging
 
 from langchain.callbacks import CallbackManager, StdOutCallbackHandler
 from langchain.chains import ChatVectorDBChain
@@ -14,16 +15,17 @@ from langchain.chains.llm import LLMChain
 from langchain.chains.question_answering import load_qa_chain
 from langchain.llms import OpenAI
 from langchain.vectorstores.base import VectorStore
-from langchain.document_loaders import DirectoryLoader, TextLoader
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores.faiss import FAISS
 
+from src.utils.mapping_directory_loader import MappingDirectoryLoader
+
+logger = logging.getLogger(__name__)
 
 def ingest_docs(path: str):
     """Read, split and store code and other files from within the repository/folder."""
-    loader = DirectoryLoader(path, loader_cls=TextLoader, loader_kwargs={"encoding": "utf-8"},
-                             recursive=True, silent_errors=True)
+    loader = MappingDirectoryLoader(path, recursive=True, silent_errors=True)
     raw_documents = loader.load()
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
@@ -74,7 +76,10 @@ def get_chain(
 if __name__ == "__main__":
     # vector-store docs (only necessary on first run) (delete vectorstore.pkl if you change the path)
     if not os.path.exists("vectorstore.pkl"):
+        logger.info("No pickle file found, ingesting docs...")
         ingest_docs(r"C:\Users\colli\PycharmProjects\langchain-master")
+    else:
+        logger.info("Using existing pickle file.")
 
     # Load Up vectorstore
     with open("vectorstore.pkl", "rb") as f:
