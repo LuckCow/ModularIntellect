@@ -2,7 +2,8 @@ import pickle
 import os
 
 from langchain import OpenAI, LLMChain, FAISS
-from langchain.callbacks import CallbackManager, StdOutCallbackHandler
+from langchain.callbacks import StdOutCallbackHandler
+from langchain.callbacks.manager import CallbackManager
 from langchain.chains import ChatVectorDBChain
 from langchain.chains.question_answering import load_qa_chain
 from langchain.document_loaders import DirectoryLoader, TextLoader
@@ -16,6 +17,7 @@ from langchain.chains.chat_vector_db.prompts import (CONDENSE_QUESTION_PROMPT,
                                                      QA_PROMPT)
 
 from src.visualization.vector_search import visualize_vector_search
+from src.web.socketio_callbackmanager import SocketIOCallbackHandler
 
 
 def ingest_docs(knowledge_path: str, storage_path: str):
@@ -28,7 +30,7 @@ def ingest_docs(knowledge_path: str, storage_path: str):
         chunk_overlap=200,
     )
     documents = text_splitter.split_documents(raw_documents)
-    embeddings = OpenAIEmbeddings()
+    embeddings = OpenAIEmbeddings(allowed_special=["<|endoftext|>"])
     vectorstore = FAISS.from_documents(documents, embeddings)
 
     # Save vectorstore
@@ -38,10 +40,10 @@ def ingest_docs(knowledge_path: str, storage_path: str):
     return vectorstore
 
 
-class KnowledgeBaseQueryAgent(BaseChainLangAgent):
+class SimpleKnowledgeBaseQueryAgent(BaseChainLangAgent):
     """Agent that queries a knowledge base."""
 
-    def __init__(self, llm: BaseLLM, knowledge_path: str, storage_path: str="vectorstore.pkl"):
+    def __init__(self, llm: BaseLLM, knowledge_path: str, storage_path: str="vectorstore.pkl", socketio=None):
         # set llm (from dependency injection)
         self.llm = llm
 
@@ -52,6 +54,8 @@ class KnowledgeBaseQueryAgent(BaseChainLangAgent):
         else:
             with open(storage_path, "rb") as f:
                 self.vectorstore = pickle.load(f)
+
+        self.socketio = socketio
 
         # initialize chat history
         self.chat_history = []
@@ -65,6 +69,8 @@ class KnowledgeBaseQueryAgent(BaseChainLangAgent):
 
         manager = CallbackManager([])
         manager.set_handler(StdOutCallbackHandler())
+        if self.socketio:
+            manager.add_handler(SocketIOCallbackHandler(self.socketio, 'ChatVectorDBChain'))
 
         question_generator = LLMChain(
             llm=self.llm, prompt=CONDENSE_QUESTION_PROMPT, callback_manager=manager, verbose=True
@@ -82,7 +88,7 @@ class KnowledgeBaseQueryAgent(BaseChainLangAgent):
 
     def execute(self, task: ITask):
 
-        visualize_vector_search(self.vectorstore, task)
+        #visualize_vector_search(self.vectorstore, task)
         result = self._chain({"question": task, "chat_history": self.chat_history})
         self.chat_history.append((task, result["answer"]))
         return result['answer']

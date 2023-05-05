@@ -1,9 +1,10 @@
-ModularIntellect is an open source project that will create an autonomous agent that can break down and execute tasks with various agents such as different large language models and APIs to get and process information. It is intelligent and autonomous and the project uses a modular dependency injection architecture in order to allow for flexible implementations of each of the different components. The components include a task queue system, a memory system to keep track of past results, a task manager that understands which agent would be best for a task, and task agents which execute the tasks themselves. There is also an overall supervisor which can modify tasks and ensures that everything is complying with an overarching imperative. The project name should be concise, interesting and descriptive.
+ModularIntellect is an open source experiment with the goal of creating a modular cognitive architecture to realize true general intelligence.
+ModularIntellect uses langchain as a toolkit for common large language model tasks which are used as the basis of cognition for the agent. It adds a web interface for inspecting and interacting with the various components of the system in order to facilitate the synthesis of understanding of the system.
 Below is a mermaid diagram showing the interface classes within the modular architechture. 
 
 Core Underlying Components of Artificial Cognition Agent:
 Memory - Cohesion over time, learning through experience, needs efficient similarity search (VectorDB)
-Cognition Engine - Solve Problems, Reason, including Complex + Abstract (LLM)
+Cognition Engine - Solve Problems, Reason, including Complex and abstract (LLM)
 
 Key Functionality:
 Planning (GOMS)

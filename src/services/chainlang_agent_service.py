@@ -5,6 +5,7 @@ from src.components.itask import ITask
 
 
 class BaseChainLangAgent(IAgentService, ABC):
+    # TODO: check that this interface is necessary, may be able to to use a ChainLang interface directly
 
     def __init__(self):
         self._chain = self._get_chain()
