@@ -5,7 +5,8 @@ from src.agents.chat_bot_interface import TripleMemoryQueryAgent
 from src.agents.knowledgebase_query_agent import SimpleKnowledgeBaseQueryAgent
 from src.memory.triple_modal_memory import TripleModalMemory
 from src.services.task_queue_service import TaskQueueService
-
+import os
+from dotenv import load_dotenv
 
 # This dependency injection strategy errored out because: ModuleNotFoundError: No module named '_gdbm'
 # class AgentBindingModule(pinject.BindingSpec):
@@ -23,9 +24,11 @@ from langchain.cache import SQLiteCache
 langchain.llm_cache = SQLiteCache(database_path=".langchain.db")
 
 
-uri = "neo4j+s://54b9b860.databases.neo4j.io"
-user = "neo4j"
-password = "uSblIp14RxxuLfgZCtHRVbGL8Z_QkEnjdgut5BwT5-c"
+load_dotenv()
+
+uri = os.getenv("NEO4J_URI")
+user = os.getenv("NEO4J_USER")
+password = os.getenv("NEO4J_PASSWORD")
 
 mem = TripleModalMemory(uri, user, password)
 
