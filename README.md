@@ -7,15 +7,15 @@ This repository attempts to create a general purpose autonomous assistant using 
 
 
 ### Core Underlying Components of Artificial Cognition Agent:
-Memory - Cohesion over time, learning through experience, specific knowledgebase for particular application
-Cognition Engine - Solve Problems, Reason, Generate text (LLM)
-Interaction with world - Simply communicating with people via natural language (which is a much more natural way for people to communicate with computers compared with programming languages because everyone already knows how to speak and write in natural language)
+- Memory - Cohesion over time, learning through experience, specific knowledgebase for particular application
+- Cognition Engine - Solve Problems, Reason, Generate text (LLM)
+- Interaction with world - Simply communicating with people via natural language (which is a much more natural way for people to communicate with computers compared with programming languages because everyone already knows how to speak and write in natural language)
 
 ### Key Functionality:
-Planning and decomposing tasks into steps
-Value Alignment
-Auditability/Human Intervention
-Use of Tools (Functional Augmentations - task specific functionality for quicker, more reliable performance)
+- Planning and decomposing tasks into steps
+- Value Alignment
+- Auditability/Human Intervention
+- Use of Tools (Functional Augmentations - task specific functionality for quicker, more reliable performance)
 
 # Memory System
  The memory system is designed to be accessible to the language model in two ways: semantic search to find relevant information and the graph structure to traverse though relationships between information. Through prompting, the language model is presented with both an initial lookup of relevant information to a query and also an overview of connections tho those  pieces of information has within the graph that the language model can request to look up. Through this process, the language model continues to build up the information it needs to answer the question as it requests promising nodes within the database. This allows for the system to quickly get to the information it needs to answer complicated questions that require drawing from multiple sources of information. Additionally, the system can reflect internally on its observations and thoughts to create notes which refer to other chunks or even other notes to allow for abstract, complex thoughts. This will hopefully result in an agent that mirrors human level intelligence.
@@ -30,7 +30,6 @@ The memory system is built upon Neo4j as the graph database and FAISS as the vec
 
 The inclusion of Note nodes within the schema allows the agent to develop abstract and complex thoughts, mirroring human-like cognition. The agent can create notes that refer to other chunks of information, which can in turn link to other notes, forming a web of interconnected thoughts and observations.
 
-(Reference human simulacrum paper) (reference vectorDB paper)
 
 Graph Database Memory Schema
 ```mermaid
@@ -50,9 +49,7 @@ graph TB
 ```
 
 # Web Interface
-It provides a web interface for inspecting and interacting with the various components of the system in order to facilitate the synthesis of understanding of the system.
-Specifically, web interface allows users to view and modify the internal thought process 
-of the autonomous agent including queries made to the large language model and memory system. It also records logs of all events that can be reviewed later. Fainlly, it provides an interface to search the memory system to inspect its contents and to upload new documents to the memory system.
+It provides a web interface for inspecting and interacting with the various components of the system in order to facilitate the synthesis of understanding of the system. Specifically, web interface allows users to view and modify the internal thought process of the autonomous agent including queries made to the large language model and memory system. It also records logs of all events that can be reviewed later. Finally, it provides an interface to search the memory system to inspect its contents and to upload new documents to the memory system.
 
 ![img.png](img.png)
 
