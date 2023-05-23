@@ -27,6 +27,18 @@ const Title = styled.h2`
   font-family: 'Roboto', sans-serif;
 `;
 
+const SubTitle = styled.h3`
+  color: #f0f0f0;
+  font-family: 'Roboto', sans-serif;
+`;
+
+const Description = styled.p`
+  color: #a0a0a0;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.9rem;
+  font-style: italic;
+`;
+
 const BlockContainer = styled.div`
   background-color: rgba(58, 65, 73, 0.8);
   border-radius: 5px;
@@ -34,10 +46,29 @@ const BlockContainer = styled.div`
   padding: 0.5rem 1rem;
 `;
 
-const Content = styled.pre`
+const GridBlockContainer = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-gap: 0.5rem;
+  background-color: rgba(58, 65, 73, 0.8);
+  border-radius: 5px;
+  padding: 0.5rem 0.5rem;
+`;
+
+const Content = styled.div`
   color: #f0f0f0;
   font-family: 'Roboto', sans-serif;
+  border: 1px solid rgba(80, 85, 90, 0.5);
+  border-radius: 5px;
+  padding: 10px;
+  background-color: rgba(50, 55, 60, 0.8);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  margin-bottom: 1rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 `;
+
+
 
 const ThemedButton = styled.button`
   background-color: #3c91e6;
@@ -103,6 +134,19 @@ const OutputField = styled(InputField)`
   cursor: text;
 `;
 
+const SelectField = styled.select`
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 5px;
+  border: 1px solid rgba(80, 85, 90, 0.5);
+  background-color: rgba(58, 65, 73, 0.8);
+  color: #f0f0f0;
+  font-family: 'Roboto', sans-serif;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  margin-top: 0.5rem;
+  appearance: none;  // This is to remove default OS styling
+`;
+
 
 export {
   Container,
@@ -115,4 +159,8 @@ export {
   InputLabel,
   InputField,
   OutputField,
+  SelectField,
+    SubTitle,
+    Description,
+    GridBlockContainer
 };
