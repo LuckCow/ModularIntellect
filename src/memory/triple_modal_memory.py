@@ -13,14 +13,12 @@ from src.utils.mapping_directory_loader import MappingDirectoryLoader
 
 
 class TripleModalMemory:
-    """Main memory implementation class for the triple-modal agent."""
+    """Provides interface for storing and retrieving data from the Neo4j+FAISS database."""
     def __init__(self, uri, user, password):
-        driver = GraphDatabase.driver(uri, auth=(user, password))
-
         # TODO: load in existing documents into the faiss index, enforcing them to be in sync
         # or save the faiss index to disk (but then we need to either save every time something happens or risk corruption
         # setup the docstore and vector store
-        neo4j_docstore = Neo4jDocstore(driver)
+        neo4j_docstore = Neo4jDocstore(uri, auth=(user, password))
         embedding = OpenAIEmbeddings()
         index = faiss.IndexFlatL2(1536)
         faiss_vector_store = FAISS(embedding.embed_query, index, docstore=neo4j_docstore, index_to_docstore_id={})
@@ -105,7 +103,22 @@ class TripleModalMemory:
 
     def load(self):
         embedding = OpenAIEmbeddings()
-        self.vector_store.load_local('../data', embedding, 'triple_modal_memory')
+        self.vector_store = FAISS.load_local('../data', embedding, 'triple_modal_memory')
+
+    def verify(self):
+        print(self.vector_store.index.ntotal)
+
+    def search(self, query, k):
+        return self.vector_store.similarity_search(query, k)
+
+
+def test_ingest_save(mem):
+    knowledge_path = r'C:\Users\colli\PycharmProjects\ModularIntellect\data\test_knowledgebase'
+    # storage_path = '../data/langchain.pkl'
+    mem.ingest_docs(knowledge_path)
+
+    mem.save()
+
 
 if __name__ == '__main__':
     import os
@@ -119,15 +132,21 @@ if __name__ == '__main__':
 
     mem = TripleModalMemory(uri, user, password)
 
-    import datetime
-    timestamp = datetime.datetime.utcnow().isoformat()
-    #faiss_vector_store.add_texts(['Start of document ', 'middle of document', 'end of document'], metadatas=[{'timestamp': timestamp}, {'timestamp': timestamp}, {'timestamp': timestamp}])
+    #test_ingest_save(mem)
+    mem.load()
+    mem.verify()
 
-    mem.save_context({"text": "The fictional nation of Jietao has 4 major cities: Niuy, Bietao, Cholkja, and Fosst"}, {})
-    mem.save_context({"text": "Leeroy is a blacksmith that lives in Niuy"}, {})
-    mem.save_context({"text": "Jaon is a mason that lives in Cholkja"}, {})
+    print(mem.vector_store.similarity_search("What are the implementations of BaseChainLangAgent?", 3))
 
-    print(mem.retrieve_similar_interactions("What nation does Leeroy live in?", 3))
+    # import datetime
+    # timestamp = datetime.datetime.utcnow().isoformat()
+    # #faiss_vector_store.add_texts(['Start of document ', 'middle of document', 'end of document'], metadatas=[{'timestamp': timestamp}, {'timestamp': timestamp}, {'timestamp': timestamp}])
+    #
+    # mem.save_context({"text": "The fictional nation of Jietao has 4 major cities: Niuy, Bietao, Cholkja, and Fosst"}, {})
+    # mem.save_context({"text": "Leeroy is a blacksmith that lives in Niuy"}, {})
+    # mem.save_context({"text": "Jaon is a mason that lives in Cholkja"}, {})
+    #
+    # print(mem.retrieve_similar_interactions("What nation does Leeroy live in?", 3))
 
     #driver.close()
 

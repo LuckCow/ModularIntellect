@@ -1,14 +1,23 @@
 from typing import Dict, Union
 from langchain.docstore.base import AddableMixin, Docstore
 from langchain.docstore.document import Document
+from neo4j import GraphDatabase
 
 
 class Neo4jDocstore(Docstore, AddableMixin):
     """Langchain Docstore implementation for a Neo4j database."""
 
-    def __init__(self, neo4j_driver):
+    def __init__(self, uri, auth):
         """Initialize with Neo4j driver."""
-        self.driver = neo4j_driver
+        self.uri = uri
+        self.auth = auth
+        self.driver = None
+
+        self._connect()
+
+    def _connect(self):
+        """Connect to the Neo4j database."""
+        self.driver = GraphDatabase.driver(self.uri, auth=self.auth)
 
     def add(self, texts: Dict[str, Document]) -> None:
         """Add texts to Neo4j database."""
@@ -109,19 +118,46 @@ class Neo4jDocstore(Docstore, AddableMixin):
                                 "MERGE (prev)-[:CONTINUES]->(c)\n")
                 session.run(chunks_query, chunks=chunks, doc_title=doc_src)
 
-    def search(self, search: str) -> Union[str, Document]:
-        """Search for a document in Neo4j database."""
+    def search(self, search_id: str) -> Union[str, Document]:
+        """
+        Search for a document in Neo4j database and include connections in metadata
+        connections are returned in the `connections` field of the metadata and have the following format:
+        [
+            {
+                "type": "CONTINUES",
+                "connected_id": "UUID8324908",
+                "direction": "out"
+            },
+            ...
+        ]
+        """
         with self.driver.session() as session:
             query = """
             MATCH (i)
             WHERE i.id = $id
-            RETURN i.text AS text
+            OPTIONAL MATCH (i)-[r_out]->(connected_out)
+            OPTIONAL MATCH (i)<-[r_in]-(connected_in)
+            RETURN i.text AS text, 
+                   collect({type: type(r_out), connected_id: connected_out.id, direction: "out"}) as outgoing_connections, 
+                   collect({type: type(r_in), connected_id: connected_in.id, direction: "in"}) as incoming_connections
             """
-            result = session.run(query, id=search)
+            result = session.run(query, id=search_id)
             record = result.single()
 
             if record:
-                return Document(page_content=record["text"], metadata={"id": search})
+                metadata = {"id": search_id, "connections": record["connections"]}
+                return Document(page_content=record["text"], metadata=metadata)
             else:
-                print('Error: ID not found.: ', search)
-                return Document(page_content="Error not found: " + search, metadata={"id": search})
+                raise ValueError(f"ID not found: {search_id}")
+                # print('Error: ID not found.: ', search_id)
+                # return Document(page_content="Error not found: " + search_id, metadata={"id": search_id})
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state['driver']
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        # After unpickling, the connection needs to be reestablished
+        self._connect()
