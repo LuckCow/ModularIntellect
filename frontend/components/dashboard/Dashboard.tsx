@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { createGlobalStyle } from 'styled-components';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import ParticleBackground from "./ParticleBackground";
-import StarMap from "../pages/StarMap";
+import Tasks from "../pages/Tasks";
 import {DashboardButtonData} from "./DashboardButtonData";
 import { useNavigate, Outlet  } from 'react-router-dom';
 import DashboardButton from './DashboardButton';
@@ -13,6 +13,15 @@ import {socket, SocketContext} from '../../services/socket';
 import ChainInterface from "../langchain/ChainInterface";
 import { StoreContext } from '../../stores/StoreContext';
 import ChainExecutionStore from "../../stores/ChainExecutionStore";
+import Logs from "../pages/Logs";
+import SearchComponent from "../pages/SearchComponent";
+import MemorySystemSummary from "../memory/MemorySystemSummary";
+
+import {
+    Header,
+    Title,
+    Container
+} from "../../SharedStyles";
 
 const chainExecutionStore = new ChainExecutionStore();
 
@@ -71,35 +80,58 @@ const ShipBackground = styled.div`
 `;
 
 
+// const DashboardInterface = styled.div`
+//   position: absolute;
+//   display: grid;
+//   grid-template-columns: repeat(3, 1fr);
+//   grid-template-rows: repeat(2, 1fr);
+//   gap: 1rem;
+//   width: 80%;
+//   height: 80%;
+//   background: rgba(0, 0, 0, 0.8);
+//   padding: 1rem;
+//   border-radius: 10px;
+// `;
+
 const DashboardInterface = styled.div`
   position: absolute;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(2, 1fr);
-  gap: 1rem;
   width: 80%;
   height: 80%;
   background: rgba(0, 0, 0, 0.8);
   padding: 1rem;
   border-radius: 10px;
+  
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 `;
 
-const Helm = () => (
-    <Page title="Helm">
+const DashboardGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 1rem;
+  flex-grow: 1;
+  overflow: auto;
+`;
+
+
+const AgentMonitor = () => (
+    <Page title="Agent Monitor">
         <ChainInterface chainExecutionStore={chainExecutionStore}/>
     </Page>
 );
 
 
-const Placeholder = () => (
-  <Page title="Placeholder">
-    <div>Placeholder Page</div>
+const Chat = () => (
+  <Page title="Chat">
+    <div>Chat Interface</div>
   </Page>
 );
 
 const Archive = () => (
-  <Page title="Archive">
-    <div>Archive Page</div>
+  <Page title="Console Logs">
+    <Logs/>
   </Page>
 );
 
@@ -110,52 +142,59 @@ const Engineering = () => (
 );
 
 const Vault = () => (
-  <Page title="Vault">
-    <div>Vault Page</div>
+  <Page title="Memory Search">
+    <SearchComponent/>
   </Page>
 );
 
 const dashboardButtons: DashboardButtonData[] = [
   {
-    id: 'star-map',
-    title: 'Star Map',
+    id: 'tasks',
+    title: 'Automated Agent Tasks',
     description: 'Check and modify objectives, tasks, and imperatives',
     widget: () => <TaskListWidget/>,
-    page: () => <StarMap/>,
+    page: () => <Tasks/>,
   },
   {
-    id: 'helm',
-    title: 'Helm',
+    id: 'agent-monitor',
+    title: 'Agent Monitor',
     description: 'Monitor agent status and execution',
-    widget: () => <div>Status Widget</div>,
-    page: () => <Helm/>,
+    widget: () => <div>Agent Status: Idle</div>,  //TODO: Add agent status widget
+    page: () => <AgentMonitor/>,
   },
-  {
-    id: 'placeholder',
-    title: 'Placeholder',
-    description: 'Future functionality',
-    widget: () => <div>Status Widget</div>,
-    page: () => <Placeholder/>,
-  },
+  // {
+  //   id: 'chat',
+  //   title: 'User Interface',
+  //   description: 'Upload documents and ask questions',
+  //   widget: () => <div>Chat Window Widget Placeholder</div>,
+  //   page: () => <Chat/>,
+  // },
   {
     id: 'archive',
-    title: 'Archive',
-    description: 'Search through logs of past executions',
-    widget: () => <div>Status Widget</div>,
+    title: 'Console Logs',
+    description: 'Review logs of past executions',
+    widget: () => <Logs/>,
     page: () => <Archive/>,
   },
+  // {
+  //   id: 'tools',
+  //   title: 'Agent Tools',
+  //   description: 'Create and edit tools and subagents',
+  //   widget: () => <Logs/>,
+  //   page: () => <Engineering/>,
+  // },
   {
-    id: 'engineering',
-    title: 'Engineering',
-    description: 'Create and edit tools and subagents',
-    widget: () => <div>Status Widget</div>,
-    page: () => <Engineering/>,
-  },
-  {
-    id: 'vault',
-    title: 'Vault',
-    description: 'Explore the memory system of the agents',
-    widget: () => <div>Status Widget</div>,
+    id: 'memory',
+    title: 'Memory System',
+    description: 'Search the memory system of the agent',
+    widget: () =>  <MemorySystemSummary
+        documents={1000}
+        chunks={2000}
+        conversations={300}
+        responses={1500}
+        reflections={500}
+        tasks={100}
+      />,
     page: () => <Vault/>,
   },
 ];
@@ -205,7 +244,6 @@ const Dashboard = () => {
 
   return (
       <>
-        <div>Dashboard</div>
         <DashboardContainer>
           <ParticlesContainer>
             <ParticleBackground/>
@@ -213,9 +251,14 @@ const Dashboard = () => {
           <ShipContainer ref={shipContainerRef}>
             <ShipBackground ref={shipBackgroundRef} />
             <DashboardInterface>
-              {dashboardButtons.map((buttonData) => (
-                  <DashboardButton key={buttonData.id} data={buttonData} />
-              ))}
+              <Header>
+                <Title>Modular Intellect Dashboard</Title>
+              </Header>
+              <DashboardGrid>
+                {dashboardButtons.map((buttonData) => (
+                    <DashboardButton key={buttonData.id} data={buttonData} />
+                ))}
+              </DashboardGrid>
             </DashboardInterface>
           </ShipContainer>
           <Outlet />
