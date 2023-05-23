@@ -8,6 +8,7 @@ import {
   InputField,
   ThemedButton,
   Content,
+    SelectField
 } from "../../SharedStyles";
 
 interface Props {}
@@ -19,7 +20,7 @@ interface Document {
 
 const SearchComponent: React.FC<Props> = () => {
   const [query, setQuery] = useState("");
-  const [searchType, setSearchType] = useState("");
+  const [searchType, setSearchType] = useState("similarity");
   const [results, setResults] = useState<Document[]>([]);
 
   const handleSearch = async () => {
@@ -42,11 +43,14 @@ const SearchComponent: React.FC<Props> = () => {
         />
       </InputContainer>
       <InputContainer>
-        <InputLabel>Search Type</InputLabel>
-        <InputField
-          value={searchType}
-          onChange={(e) => setSearchType(e.target.value)}
-        />
+          <InputLabel>Search Type</InputLabel>
+          <SelectField
+            value={searchType}
+            onChange={(e) => setSearchType(e.target.value)}
+          >
+            <option value="similarity">Similarity</option>
+            <option value="mmr">Maximal Marginal Relevance</option>
+          </SelectField>
       </InputContainer>
       <ThemedButton onClick={handleSearch}>Search</ThemedButton>
       <div>
