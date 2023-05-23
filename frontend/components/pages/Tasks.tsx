@@ -83,7 +83,7 @@ const Header = styled.div`
   z-index: 10;
 `;
 
-const StarMap: React.FC = () => {
+const Tasks: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
 
   useEffect(() => {
@@ -138,7 +138,7 @@ const StarMap: React.FC = () => {
   };
 
   return (
-    <Page title="Star Map">
+    <Page title="Tasks - for Autonomous Execution">
       <TaskListContainer>
         <Header>
           <Title>Task List</Title>
@@ -163,4 +163,4 @@ const StarMap: React.FC = () => {
   );
 };
 
-export default StarMap;
+export default Tasks;
