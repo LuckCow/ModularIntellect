@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, List, Union
 from abc import ABC, abstractmethod
 from threading import Event
@@ -9,6 +10,7 @@ from langchain.schema import LLMResult, AgentAction, AgentFinish
 
 from src.web.chain_state import ChainState
 
+logger = logging.getLogger(__name__)
 
 class SocketIOCallbackHandler(BaseCallbackHandler):
     def __init__(self, socketio: SocketIO, room: str):
@@ -17,7 +19,7 @@ class SocketIOCallbackHandler(BaseCallbackHandler):
         self.chain_state = ChainState()
 
     def chain_execution_state(self):
-        print('chain_execution_state: ', self.chain_state.chain_blocks)
+        #print('chain_execution_state: ', self.chain_state.chain_blocks)
         return jsonify(
             chainBlocks=[{
                 'title': block.title,
@@ -28,6 +30,7 @@ class SocketIOCallbackHandler(BaseCallbackHandler):
         )
 
     def on_chain_start(self, serialized: Dict[str, Any], inputs: Dict[str, Any], **kwargs: Any) -> Any:
+        logging.info('on_chain_start: serialized: %s, inputs: %s', serialized, inputs)
         self.chain_state.add_chain_block('Chain Title Placeholder', inputs)
         self.socketio.emit('chain_start', {'serialized': serialized, 'inputs': inputs})#, room=self.room)
 
@@ -47,7 +50,7 @@ class SocketIOCallbackHandler(BaseCallbackHandler):
         # Create callback function to continue execution
         @self.socketio.on('chain_start_confirm')
         def chain_start_confirm_callback():
-            print('callback confirmed')
+            logging.info('chain_start_confirm_callback')
             chain_start_confirm_event.set()
 
         # Wait for the event to be set by the frontend's confirmation
@@ -57,6 +60,7 @@ class SocketIOCallbackHandler(BaseCallbackHandler):
         #self.socketio.off('chain_start_confirm', chain_start_confirm_callback, room=self.room)
 
     def on_chain_end(self, outputs: Dict[str, Any], **kwargs: Any) -> Any:
+        logging.info('on_chain_end: outputs: %s', outputs)
         self.chain_state.set_chain_block_outputs(outputs)
         self.socketio.emit('chain_end', {'outputs': outputs})#, room=self.room)
 

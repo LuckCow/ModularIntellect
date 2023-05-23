@@ -1,18 +1,39 @@
+import json
+import os
+
 from flask import Flask, request, jsonify, send_from_directory
 from flask_socketio import SocketIO, emit
 import random
 import threading
 import time
+from logger_config import setup_logger
+from src.agents.chat_bot_interface import TripleMemoryQueryAgent
 
 from langchain import OpenAI
 
 from src.agents.chat_bot_interface import TripleMemoryQueryAgent
-from src.agents.knowledgebase_query_agent import SimpleKnowledgeBaseQueryAgent
+from src.memory.triple_modal_memory import TripleModalMemory
 from src.web.socketio_callbackmanager import SocketIOCallbackHandler
 
 app = Flask(__name__, static_folder='../../frontend/dist')
 socketio = SocketIO(app, cors_allowed_origins='*')
+
+logger = setup_logger(socketio)
 manager = SocketIOCallbackHandler(socketio, room='')
+
+from dotenv import load_dotenv
+load_dotenv()
+uri = os.getenv("NEO4J_URI")
+user = os.getenv("NEO4J_USER")
+password = os.getenv("NEO4J_PASSWORD")
+
+# Create an instance of KnowledgeBaseQueryAgent
+question_gen_llm = OpenAI(temperature=0, verbose=True)
+knowledge_path = r'C:\Users\colli\PycharmProjects\langchain-master'
+storage_path = '../../data/langchain.pkl'
+triple_memory = TripleModalMemory(uri, user, password)
+triple_memory.load()
+knowledge_base_query_agent = TripleMemoryQueryAgent(question_gen_llm, triple_memory, socketio)
 
 import langchain
 #langchain.callbacks.callback_manager = manager
@@ -77,8 +98,29 @@ def search():
     data = request.json
     query = data["query"]
     search_type = data["search_type"]
-    documents = vector_store.search(query, search_type)
+    documents = triple_memory.vector_store.search(query, search_type)
     return jsonify([{'page_content': doc.page_content, 'metadata': doc.metadata} for doc in documents])
+
+PAGE_SIZE = 50
+@app.route("/latest_logs")
+def latest_logs():
+    page = int(request.args.get("page", 1))
+
+    with open("app.log", "r") as log_file:
+        all_logs = log_file.readlines()
+
+    start_index = len(all_logs) - page * PAGE_SIZE
+    end_index = start_index + PAGE_SIZE
+    page_logs = all_logs[start_index:end_index]
+
+    return json.dumps(page_logs[::-1])
+
+@app.route("/ingest", methods=["POST"])
+def ingest():
+    data = request.json
+    path = data["system_path"]
+    triple_memory.ingest_docs(path)
+    return "", 201
 
 
 if __name__ == "__main__":
