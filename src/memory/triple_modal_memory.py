@@ -1,4 +1,5 @@
 from typing import Dict, List, Any
+import time
 
 from langchain.schema import BaseMemory
 from langchain import FAISS
@@ -84,7 +85,7 @@ class TripleModalMemory:
 
     def ingest_docs(self, path: str, chunk_size=1000, chunk_overlap=200):
         """Read, split and store code and other files from within the repository/folder."""
-        loader = MappingDirectoryLoader(path, recursive=True, silent_errors=True)
+        loader = MappingDirectoryLoader(path, recursive=True, silent_errors=False)
         raw_documents = loader.load()
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
@@ -96,7 +97,15 @@ class TripleModalMemory:
             d.metadata["chunk_overlap"] = chunk_overlap
             d.metadata["node_type"] = "document"
 
-        self.vector_store.add_documents(documents)
+        # Add documents to vector store in chunks with wait time to avoid getting rate limited
+        # by the OpenAI API (20 requests per minute)
+        for i in range(0, len(documents), 20):
+            self.vector_store.add_documents(documents[i:i+20])
+            print(f"Added documents {i} to {i+20}/{len(documents)} to vector store")
+            time.sleep(60)
+
+
+        #self.vector_store.add_documents(documents)
 
     def save(self):
         self.vector_store.save_local('../data', 'triple_modal_memory')

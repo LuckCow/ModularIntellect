@@ -1,68 +1,58 @@
-import pinject
-from langchain import OpenAI
+from langchain import OpenAI, LLMChain
+from langchain.callbacks import StdOutCallbackHandler
 
-from src.agents.chat_bot_interface import TripleMemoryQueryAgent
-from src.agents.knowledgebase_query_agent import SimpleKnowledgeBaseQueryAgent
+from src.agents.graphdb_traversal_chain import GraphDBTraversalChain, graph_traverse_prompt
 from src.memory.triple_modal_memory import TripleModalMemory
-from src.services.task_queue_service import TaskQueueService
+
 import os
 from dotenv import load_dotenv
 
-# This dependency injection strategy errored out because: ModuleNotFoundError: No module named '_gdbm'
-# class AgentBindingModule(pinject.BindingSpec):
-#     def configure(self, bind):
-#         bind('llm', to_instance=question_gen_llm)
-# obj_graph = pinject.new_object_graph() #binding_specs=[AgentBindingModule()])
-# knowledge_base_query_agent = obj_graph.provide(KnowledgeBaseQueryAgent, args=[knowledge_path])
-
-# Create a dependency injection object graph
-#obj_graph = pinject.new_object_graph()
 
 # Set up the cache
 import langchain
 from langchain.cache import SQLiteCache
 langchain.llm_cache = SQLiteCache(database_path=".langchain.db")
 
-
+# initialize the memory
 load_dotenv()
-
 uri = os.getenv("NEO4J_URI")
 user = os.getenv("NEO4J_USER")
 password = os.getenv("NEO4J_PASSWORD")
 
 mem = TripleModalMemory(uri, user, password)
 
-# Create an instance of KnowledgeBaseQueryAgent
-question_gen_llm = OpenAI(temperature=0, verbose=True)
-knowledge_path = r'C:\Users\colli\PycharmProjects\ModularIntellect\data\test_knowledgebase'
-#storage_path = '../data/langchain.pkl'
-mem.ingest_docs(knowledge_path)
-knowledge_base_query_agent = TripleMemoryQueryAgent(question_gen_llm, mem)
+# Create memory from docks or load from file if it exists
+ingested = os.path.exists('../data/triple_modal_memory.faiss')
+if not ingested:
+    knowledge_path = r'C:\Users\colli\Documents\AIPapers'
+    mem.ingest_docs(knowledge_path)
+    mem.save()
+    print("Memory initialized and saved.")
 
-#mem.save()  #AttributeError: Can't pickle local object 'Neo4jPool.open.<locals>.opener'
+else:
+    mem.load()
+    print("Memory loaded.")
 
-task_q = TaskQueueService()
+handler = StdOutCallbackHandler()
 
+llm = OpenAI(temperature=0.0, verbose=True)
+chain = LLMChain(llm=llm, prompt=graph_traverse_prompt, callbacks=[handler])
+knowledge_base_query_agent = GraphDBTraversalChain(llm_chain=chain, graph_vector_store=mem.vector_store)
 
-#q.load()
-task_q.enqueue("What do the two leaves teach readers about companionship and having a friend? Support your answer with evidence from the text and explain your argument completely.")
-task_q.enqueue("Which best describes the MOOD of the 'two leaves' story? a.  Cheerful			b.  Bleak			c.  Humorous			d.  Optimistic")
-task_q.enqueue("Which character trait does NOT apply to Eddie when he was a boy? a.  Defiant			b.  Understanding		c.  Diligent			d.  Respectful")
-#task_q.enqueue("What are all the classes that extent BaseLLM?")
-# output was: The classes that extend BaseLLM are AzureOpenAI, Cohere, FakeLLM, HuggingFaceHub, InstructEmbeddings, OpenAI, SageMakerEndpoint, SelfHostedModels, TensorflowHub, and Writer.
-print(str(task_q))
+# Example Research questions:
+# What are different methods of providing language models with additional context to better answer questions?
+# How can semantic search be used in conjunction with large language models in order to better answer questions?
 
 def main_loop():
     try:
-        while task_q:
-            task = task_q.dequeue()
-            print(knowledge_base_query_agent.execute(task))
+        while True:
+            question = input("Enter a question: ")
+            print(knowledge_base_query_agent.run(question))
 
 
     except KeyboardInterrupt:
         print("Shutdown: Saving...")
-        task_q.store()
-        print(str(task_q))
+        mem.save()
         print("Shutdown: Complete")
 
     else:

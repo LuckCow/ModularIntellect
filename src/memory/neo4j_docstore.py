@@ -145,7 +145,10 @@ class Neo4jDocstore(Docstore, AddableMixin):
             record = result.single()
 
             if record:
-                metadata = {"id": search_id, "connections": record["connections"]}
+                # Omit Part-Of connections
+                connections = [conn for conn in record["outgoing_connections"] + record["incoming_connections"]
+                               if conn['type'] != "PART_OF"]
+                metadata = {"id": search_id, "connections": connections}
                 return Document(page_content=record["text"], metadata=metadata)
             else:
                 raise ValueError(f"ID not found: {search_id}")
