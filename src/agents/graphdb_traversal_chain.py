@@ -7,7 +7,6 @@ database and also determine whether further exploration is needed.
 import re
 
 from langchain import PromptTemplate
-from langchain.prompts import HumanMessagePromptTemplate, ChatPromptTemplate
 from langchain.schema import Document, SystemMessage
 from langchain.chains import LLMChain
 from langchain.chains.base import Chain
@@ -220,6 +219,72 @@ def _parse_output(output):
     return {'reviewed_chunks': chunk_data, 'working_summary': summary, 'requested_connections': connection_data}
 
 
+if __name__ == '__main__':
+    from langchain.callbacks import StdOutCallbackHandler
+    from langchain.chat_models import ChatOpenAI
+
+    from src.agents.chat_chain import ChatChain
+    from src.memory.triple_modal_memory import TripleModalMemory
+    import os
+    from dotenv import load_dotenv
+
+    # Set up the cache
+    import langchain
+    from langchain.cache import SQLiteCache
+
+    langchain.llm_cache = SQLiteCache(database_path=".langchain.db")
+
+    # initialize the memory
+    load_dotenv()
+    uri = os.getenv("NEO4J_URI")
+    user = os.getenv("NEO4J_USER")
+    password = os.getenv("NEO4J_PASSWORD")
+
+    mem = TripleModalMemory(uri, user, password)
+
+    # Create memory from docks or load from file if it exists
+    ingested = os.path.exists('../data/triple_modal_memory.faiss')
+    if not ingested:
+        knowledge_path = r'C:\Users\colli\Documents\AIPapers'
+        mem.ingest_docs(knowledge_path)
+        mem.save()
+        print("Memory initialized and saved.")
+
+    else:
+        mem.load()
+        print("Memory loaded.")
+
+    handler = StdOutCallbackHandler()
+
+    llm = ChatOpenAI(
+        model_name="gpt-4",  # "gpt-3.5-turbo"
+        temperature=0,
+        verbose=True
+    )
+    chain = ChatChain(llm=llm, prompt=mem_query_template, callbacks=[handler], system_message=mem_system_message)
+    knowledge_base_query_agent = GraphDBTraversalChain(llm_chain=chain, graph_vector_store=mem.vector_store)
+
+
+    # Example Research questions:
+    # What are different methods of providing language models with additional context to better answer questions?
+    # How can semantic search be used in conjunction with large language models in order to better answer questions?
+    # What are some techniques for achieving better general intelligence in language models?
+
+    def main_loop():
+        try:
+            while True:
+                question = input("Enter a question: ")
+                print(knowledge_base_query_agent.run(question))
+
+
+        except KeyboardInterrupt:
+            print("Shutdown: Saving...")
+            mem.save()
+            print("Shutdown: Complete")
+
+        else:
+            print("Completed all tasks.")
+
 """
 Example:-------------------------------------------------
 What are the known uses of Glowing Moon Berries?
@@ -248,7 +313,7 @@ Content: 'Glowing Moon Berries are known for their unique properties. They are u
 Connections:
     CONTINUES to Document #12
     CONTINUES FROM Document #2
-    
+
 Document #3
 Content: 'In 2225, during the maiden voyage of the interstellar exploration ship 'Star Wanderer', the crew made a surprising discovery on Zaphiron, an obscure moon in the Pegasus galaxy. Amidst the constant twilight of the moon's surface, they found clusters of luminescent berries, later named 'Glowing Moon Berries', their radiance illuminating the alien landscape with an ethereal glow.'
 Connections:
@@ -260,51 +325,10 @@ Content: 'Later in 2225, as the Star Wanderer's crew continued their exploration
 Connections:
     CONTINUES to Document #16
     CONTINUES FROM Document #15
-    
+
 Document #12
 Content: 'Remarkably, when juiced and refined, the berries can power the nano-tech machines for months on a single serving, outperforming any other known energy source. Furthermore, the energy they emit is clean and sustainable, making Glowing Moon Berries a crucial component in the maintenance of the delicate ecological balance on Zaphiron.'
 Connections:
     CONTINUES to Document #17
     CONTINUES FROM Document #5
 """
-
-
-if __name__ == '__main__':
-    # from dotenv import load_dotenv
-    #
-    # load_dotenv()
-    # uri = os.getenv("NEO4J_URI")
-    # user = os.getenv("NEO4J_USER")
-    # password = os.getenv("NEO4J_PASSWORD")
-    #
-    # # Create an instance of KnowledgeBaseQueryAgent
-    # question_gen_llm = OpenAI(temperature=0, verbose=True)
-    # knowledge_path = r'C:\Users\colli\PycharmProjects\langchain-master'
-    # storage_path = '../../data/langchain.pkl'
-    # triple_memory = TripleModalMemory(uri, user, password)
-    # triple_memory.load()
-    #
-    # llm = OpenAI(temperature=0.0)
-    # chain = LLMChain(llm=llm, prompt=graph_traverse_prompt)
-    # GraphDBTraversalChain(llm_chain=chain, graph_vector_store=triple_memory.vector_store)
-
-    from pprint import pprint
-    pprint(_parse_output("""Chunk Review:
-Chunk #1 - Relevant - Glowing Moon Berries are a rare type of berry found on the moon Zaphiron in the Pegasus galaxy. They shine brightly in the moon's perennial twilight.
-Chunk #2 - Not Relevant - None
-Chunk #7 - Not Relevant - None
-
-Answer so far: None
-
-Further exploration chunk connection lookups:
-CONTINUES TO Context Chunk #3
-CONTINUES TO Context Chunk #5"""))
-
-    pprint(_parse_output("""Chunk Review: 
-Chunk #c11e9a82-9e4e-488c-a88e-108abfb9b990 - Relevant - This chunk discusses how language models can be improved by prepending a set of related (question, answer) pairs, natural language instructions, and chain of thought prompting. 
-Chunk #33a12410-3278-40e4-93ee-c4426f9b6c87 - Relevant - This chunk discusses language modeling and memory augmentation. 
-Chunk #116583cf-a044-442b-a60c-88faeff18739 - Relevant - This chunk discusses how retrieval-augmented models are used in open-domain question answering, dialogue, and machine translation. 
-Chunk #e96786bd-46c0-4319-9ecb-786df32bba17 - Relevant - This chunk discusses how knowledge information can be used to improve the generation capability of language models. 
-Answer so far: Different methods of providing language models with additional context to better answer questions include prepending a set of related (question, answer) pairs, natural language instructions,"""))
-
-

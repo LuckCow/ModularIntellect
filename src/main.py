@@ -1,7 +1,9 @@
 from langchain import OpenAI, LLMChain
 from langchain.callbacks import StdOutCallbackHandler
+from langchain.chat_models import ChatOpenAI
 
-from src.agents.graphdb_traversal_chain import GraphDBTraversalChain, graph_traverse_prompt
+from src.agents.chat_chain import ChatChain
+from src.agents.graphdb_traversal_chain import GraphDBTraversalChain, mem_query_template, mem_system_message
 from src.memory.triple_modal_memory import TripleModalMemory
 
 import os
@@ -35,13 +37,18 @@ else:
 
 handler = StdOutCallbackHandler()
 
-llm = OpenAI(temperature=0.0, verbose=True)
-chain = LLMChain(llm=llm, prompt=graph_traverse_prompt, callbacks=[handler])
+llm = ChatOpenAI(
+    model_name="gpt-4", #"gpt-3.5-turbo"
+    temperature=0,
+    verbose=True
+)
+chain = ChatChain(llm=llm, prompt=mem_query_template, callbacks=[handler], system_message=mem_system_message)
 knowledge_base_query_agent = GraphDBTraversalChain(llm_chain=chain, graph_vector_store=mem.vector_store)
 
 # Example Research questions:
 # What are different methods of providing language models with additional context to better answer questions?
 # How can semantic search be used in conjunction with large language models in order to better answer questions?
+# What are some techniques for achieving better general intelligence in language models?
 
 def main_loop():
     try:
