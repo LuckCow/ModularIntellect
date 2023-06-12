@@ -7,7 +7,8 @@ database and also determine whether further exploration is needed.
 import re
 
 from langchain import PromptTemplate
-from langchain.schema import Document
+from langchain.prompts import HumanMessagePromptTemplate, ChatPromptTemplate
+from langchain.schema import Document, SystemMessage
 from langchain.chains import LLMChain
 from langchain.chains.base import Chain
 
@@ -17,8 +18,8 @@ from langchain.vectorstores import VectorStore
 from pydantic import PrivateAttr
 
 
-graph_traverse_prompt = PromptTemplate(input_variables=['question', 'working_summary', 'context_chunks'],
-    template="""Act as a researcher trying to answer a question about a topic. You have access to a knowledge base of documents broken down into context chunks that are connected to eachother. 
+# gives instructions for how to use memory system
+mem_system_message = """Act as a researcher trying to answer a question about a topic. You have access to a knowledge base of documents broken down into context chunks that are connected to eachother. 
 Information will be presented to you with a small number of chunks at a time. Each chunk of information may or may not be relevant to the question.
 Additionally, each context chunk also has connection references to other chunks that are not immediately presented, but can be accessed by requesting to lookup the chunk referenced by the connection.
 For each chunk that you are presented with, list out the chunk number, then evaluate whether or not the chunk is relevant to the question. If the chunk is relevant, provide a summary of the relevant information in the chunk, otherwise, just put 'None'
@@ -36,8 +37,10 @@ Further exploration chunk connection lookups:
 CONTINUES TO Context Chunk #<chunk id>
 CONTINUES TO Context Chunk #<chunk id>
 "
+"""
 
-The question is: 
+# Presents context information
+mem_query_template = PromptTemplate.from_template("""The question is: 
 QUESTION: {question}
 
 Here is the information gathered so far:
@@ -45,8 +48,7 @@ WORKING SUMMARY: {working_summary}
 
 Below are the relevant context chunks that have been looked up so far:
 CONTEXT CHUNKS:
-{context_chunks}
-""")
+{context_chunks}""")
 
 
 class GraphDBTraversalChain(Chain):
@@ -60,7 +62,7 @@ class GraphDBTraversalChain(Chain):
         max_depth: The maximum depth to traverse in the graph database (default is 3).
         starting_chunks: The number of initial context chunks to provide to the LLM (default is 4).
     """
-    llm_chain: LLMChain
+    llm_chain: LLMChain = None
     graph_vector_store: VectorStore
     max_depth: int = 3
     starting_chunks: int = 4
@@ -136,7 +138,8 @@ class GraphDBTraversalChain(Chain):
                                      'working_summary': working_summary,
                                      'context_chunks': self.explain_document_graph(context_docs)})
             # Parse output to get working summary
-            output.update(_parse_output(output['text']))
+            output.update(_parse_output(output['response']))
+            working_summary = output['working_summary']
 
             # Stop calling once no additional exploration calls are made or the max depth is reached
             depth += 1

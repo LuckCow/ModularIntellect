@@ -1,5 +1,6 @@
 import json
 import os
+import re
 
 from flask import Flask, request, jsonify, send_from_directory
 from flask_socketio import SocketIO, emit
@@ -102,18 +103,45 @@ def search():
     return jsonify([{'page_content': doc.page_content, 'metadata': doc.metadata} for doc in documents])
 
 PAGE_SIZE = 50
+
+
+def parse_log_entry(log_entry):
+    log_lines = log_entry.split('\n')  # Split the log entry into lines
+    log_data = log_lines[0].split(' - ', 3)  # Split the first line into 4 parts
+    stack_trace = '\n'.join(log_lines[1:]) if len(log_lines) > 1 else None
+    log_dict = {
+        'timestamp': log_data[0],
+        'log_level': log_data[1],
+        'log_name': log_data[2],
+        'message': log_data[3],
+        'stack_trace': stack_trace
+    }
+    return log_dict
+
 @app.route("/latest_logs")
 def latest_logs():
     page = int(request.args.get("page", 1))
 
     with open("app.log", "r") as log_file:
-        all_logs = log_file.readlines()
+        all_logs = []
+        current_log = []
+        for line in log_file:
+            # if the line starts with a date, it's a new log
+            if re.match(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}', line):
+                if current_log:
+                    # if current log exists, add it to all logs and start new log
+                    all_logs.append(parse_log_entry(''.join(current_log)))
+                    current_log = []
+            current_log.append(line)
+        # add the last log
+        if current_log:
+            all_logs.append(parse_log_entry(''.join(current_log)))
 
     start_index = len(all_logs) - page * PAGE_SIZE
     end_index = start_index + PAGE_SIZE
     page_logs = all_logs[start_index:end_index]
 
-    return json.dumps(page_logs[::-1])
+    return json.dumps(page_logs[::-1], default=str)
 
 @app.route("/ingest", methods=["POST"])
 def ingest():
